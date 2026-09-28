@@ -46,26 +46,26 @@ export const createManagedUser = onCall(
       );
     }
 
-    const adminId = request.auth.uid;
+    const creatorId = request.auth.uid;
 
-    const adminSnapshot = await db
+    const creatorSnapshot = await db
       .collection("users")
-      .doc(adminId)
+      .doc(creatorId)
       .get();
 
-    if (!adminSnapshot.exists) {
+    if (!creatorSnapshot.exists) {
       throw new HttpsError(
         "permission-denied",
-        "Admin profile was not found."
+        "Account profile was not found."
       );
     }
 
-    const adminData = adminSnapshot.data();
+    const creatorData = creatorSnapshot.data();
 
     if (
-      adminData?.status !== "active" ||
+      creatorData?.status !== "active" ||
       !["admin", "super_admin"].includes(
-        adminData.role
+        creatorData.role
       )
     ) {
       throw new HttpsError(
@@ -79,7 +79,10 @@ export const createManagedUser = onCall(
 
     const fullName = cleanString(data.fullName);
     const email = cleanString(data.email).toLowerCase();
-    const password = data.password ?? "";
+    const password =
+      typeof data.password === "string"
+        ? data.password
+        : "";
     const groupId = cleanString(data.groupId);
 
     if (fullName.length < 2) {
@@ -96,10 +99,7 @@ export const createManagedUser = onCall(
       );
     }
 
-    if (
-      typeof password !== "string" ||
-      password.length < 8
-    ) {
+    if (password.length < 8) {
       throw new HttpsError(
         "invalid-argument",
         "Password must be at least 8 characters."
@@ -129,11 +129,19 @@ export const createManagedUser = onCall(
     const groupData = groupSnapshot.data();
 
     const isSuperAdmin =
-      adminData.role === "super_admin";
+      creatorData.role === "super_admin";
+
+    const groupAdminIds = Array.isArray(
+      groupData?.adminIds
+    )
+      ? groupData.adminIds.filter(
+          (value): value is string =>
+            typeof value === "string"
+        )
+      : [];
 
     const isGroupAdmin =
-      Array.isArray(groupData?.adminIds) &&
-      groupData.adminIds.includes(adminId);
+      groupAdminIds.includes(creatorId);
 
     if (!isSuperAdmin && !isGroupAdmin) {
       throw new HttpsError(
@@ -142,7 +150,9 @@ export const createManagedUser = onCall(
       );
     }
 
-    let firebaseUser;
+    let firebaseUser:
+      | Awaited<ReturnType<typeof auth.createUser>>
+      | null = null;
 
     try {
       firebaseUser = await auth.createUser({
@@ -158,22 +168,24 @@ export const createManagedUser = onCall(
         .collection("users")
         .doc(userId);
 
+      const groupUserReference = db
+        .collection("group_users")
+        .doc(`${groupId}_${userId}`);
+
       const userDocument: UserDocument = {
         fullName,
         email,
         role: "user",
         status: "active",
         groupIds: [groupId],
-        adminIds: isSuperAdmin
-          ? []
-          : [adminId],
+
+        // Every Admin managing this group can see
+        // and manage the new user.
+        adminIds: groupAdminIds,
+
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       };
-
-      const groupUserReference = db
-        .collection("group_users")
-        .doc(`${groupId}_${userId}`);
 
       const batch = db.batch();
 
@@ -182,7 +194,7 @@ export const createManagedUser = onCall(
       batch.set(groupUserReference, {
         groupId,
         userId,
-        addedBy: adminId,
+        addedBy: creatorId,
         status: "active",
         createdAt: FieldValue.serverTimestamp(),
       });
@@ -194,17 +206,33 @@ export const createManagedUser = onCall(
         userId,
       };
     } catch (error) {
-      if (firebaseUser) {
-        try {
-          await auth.deleteUser(firebaseUser.uid);
-        } catch {
-          // Prevent cleanup errors from replacing
-          // the original operation error.
-        }
+      if (
+        error instanceof HttpsError
+      ) {
+        throw error;
       }
 
-      if (error instanceof HttpsError) {
-        throw error;
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        error.code ===
+          "auth/email-already-exists"
+      ) {
+        throw new HttpsError(
+          "already-exists",
+          "An account with this email already exists."
+        );
+      }
+
+      if (firebaseUser) {
+        try {
+          await auth.deleteUser(
+            firebaseUser.uid
+          );
+        } catch {
+          // Preserve the original operation error.
+        }
       }
 
       throw new HttpsError(
