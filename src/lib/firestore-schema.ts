@@ -19,6 +19,7 @@ export type UserProfile = {
   email: string;
   role: UserRole;
   status: AccountStatus;
+  groupIds: string[];
   avatarUrl?: string;
   phone?: string;
   createdAt: string;
