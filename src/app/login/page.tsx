@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-
+import AuthLinks from "@/components/auth/auth-links";
 import { loginUser } from "@/lib/auth";
 
 export default function LoginPage() {
@@ -95,6 +95,7 @@ export default function LoginPage() {
             {loading ? "Signing in..." : "Sign in"}
           </button>
         </form>
+        <AuthLinks mode="login" />
       </section>
     </main>
   );
