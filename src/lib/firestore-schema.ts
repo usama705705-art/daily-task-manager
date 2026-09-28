@@ -20,11 +20,7 @@ export type UserProfile = {
   role: UserRole;
   status: AccountStatus;
 
-  // Groups this user belongs to.
   groupIds: string[];
-
-  // Admins who are allowed to manage this user.
-  // Super Admin is not required to be listed here.
   adminIds: string[];
 
   avatarUrl?: string;
@@ -39,10 +35,12 @@ export type Group = {
   description?: string;
   status: GroupStatus;
 
-  // Admins assigned to this group.
+  // Admins who manage this group.
   adminIds: string[];
 
+  // User who originally created the group.
   createdBy: string;
+
   createdAt: string;
   updatedAt: string;
 };
