@@ -40,14 +40,15 @@ export type GroupAdmin = {
   id: string;
   groupId: string;
   adminId: string;
+  assignedBy: string;
   createdAt: string;
 };
-
 export type GroupUser = {
   id: string;
   groupId: string;
   userId: string;
   addedBy: string;
+  status: "active" | "inactive";
   createdAt: string;
 };
 
