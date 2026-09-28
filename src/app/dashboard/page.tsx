@@ -1,6 +1,7 @@
 "use client";
 
 import AuthGuard from "@/components/auth/auth-guard";
+import LogoutButton from "@/components/auth/logout-button";
 import { useAuthStore } from "@/store/auth-store";
 
 export default function DashboardPage() {
@@ -21,6 +22,8 @@ export default function DashboardPage() {
               Welcome back, {user?.displayName || "User"}.
             </p>
           </div>
+
+          <LogoutButton />
         </section>
 
         <section className="dashboard-grid">
