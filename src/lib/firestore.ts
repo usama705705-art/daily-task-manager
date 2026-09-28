@@ -3,8 +3,11 @@ import {
   collection,
   doc,
   getDoc,
+  getDocs,
+  query,
   serverTimestamp,
   setDoc,
+  where,
 } from "firebase/firestore";
 
 import { db } from "./firebase";
@@ -42,6 +45,22 @@ export async function createUserProfile(
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
+}
+
+export async function getAccessibleGroups(
+  adminId: string
+): Promise<Group[]> {
+  const groupsQuery = query(
+    collection(db, "groups"),
+    where("adminIds", "array-contains", adminId)
+  );
+
+  const snapshot = await getDocs(groupsQuery);
+
+  return snapshot.docs.map((groupDoc) => ({
+    id: groupDoc.id,
+    ...groupDoc.data(),
+  })) as Group[];
 }
 
 export async function createGroup(
