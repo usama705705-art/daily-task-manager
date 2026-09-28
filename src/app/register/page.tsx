@@ -51,12 +51,13 @@ export default function RegisterPage() {
       );
 
       await createUserProfile(firebaseUser.uid, {
-        fullName: cleanName,
-        email: cleanEmail,
-        role: "admin",
-        status: "active",
-        groupIds: [],
-      });
+  fullName: cleanName,
+  email: cleanEmail,
+  role: "admin",
+  status: "active",
+  groupIds: [],
+  adminIds: [],
+});
 
       router.replace("/dashboard");
     } catch {
