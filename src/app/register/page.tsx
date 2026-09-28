@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-
+import AuthLinks from "@/components/auth/auth-links";
 import { registerUser } from "@/lib/auth";
 
 export default function RegisterPage() {
@@ -144,6 +144,7 @@ export default function RegisterPage() {
             {loading ? "Creating account..." : "Create account"}
           </button>
         </form>
+        <AuthLinks mode="register" />
       </section>
     </main>
   );
