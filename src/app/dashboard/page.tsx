@@ -1,22 +1,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
+
 import AuthGuard from "@/components/auth/auth-guard";
 import LogoutButton from "@/components/auth/logout-button";
 import { getUserProfile } from "@/lib/firestore";
-import { useAuthStore } from "@/store/auth-store";
 import type { UserProfile } from "@/lib/firestore-schema";
+import { useAuthStore } from "@/store/auth-store";
 
 export default function DashboardPage() {
   const user = useAuthStore((state) => state.user);
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [profileLoading, setProfileLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadProfile() {
       if (!user) {
-        setProfileLoading(false);
+        setLoading(false);
         return;
       }
 
@@ -24,7 +25,7 @@ export default function DashboardPage() {
         const userProfile = await getUserProfile(user.uid);
         setProfile(userProfile);
       } finally {
-        setProfileLoading(false);
+        setLoading(false);
       }
     }
 
@@ -57,7 +58,7 @@ export default function DashboardPage() {
 
           <div className="dashboard-header-actions">
             <span className="dashboard-role">
-              {profileLoading ? "Loading..." : roleLabel}
+              {loading ? "Loading..." : roleLabel}
             </span>
 
             <LogoutButton />
