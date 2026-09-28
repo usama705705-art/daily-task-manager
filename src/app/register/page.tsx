@@ -2,8 +2,10 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+
 import AuthLinks from "@/components/auth/auth-links";
 import { registerUser } from "@/lib/auth";
+import { createUserProfile } from "@/lib/firestore";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -21,24 +23,45 @@ export default function RegisterPage() {
 
     setError("");
 
+    const cleanName = fullName.trim();
+    const cleanEmail = email.trim();
+
+    if (cleanName.length < 2) {
+      setError("Please enter your full name.");
+      return;
+    }
+
     if (password.length < 8) {
-      setError("Password kam az kam 8 characters ka hona chahiye.");
+      setError("Password must be at least 8 characters.");
       return;
     }
 
     if (password !== confirmPassword) {
-      setError("Passwords match nahi kar rahe.");
+      setError("Passwords do not match.");
       return;
     }
 
     setLoading(true);
 
     try {
-      await registerUser(email.trim(), password, fullName.trim());
+      const firebaseUser = await registerUser(
+        cleanEmail,
+        password,
+        cleanName
+      );
+
+      await createUserProfile(firebaseUser.uid, {
+        fullName: cleanName,
+        email: cleanEmail,
+        role: "admin",
+        status: "active",
+        groupIds: [],
+      });
+
       router.replace("/dashboard");
     } catch {
       setError(
-        "Account create nahi ho saka. Email check karein ya dobara try karein."
+        "Account creation failed. Please check your information and try again."
       );
     } finally {
       setLoading(false);
@@ -144,6 +167,7 @@ export default function RegisterPage() {
             {loading ? "Creating account..." : "Create account"}
           </button>
         </form>
+
         <AuthLinks mode="register" />
       </section>
     </main>
