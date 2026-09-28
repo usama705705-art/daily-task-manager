@@ -1,0 +1,122 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSuperAdmin() {
+      return signedIn()
+        && get(
+          /databases/$(database)/documents/users/$(request.auth.uid)
+        ).data.role == "super_admin";
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && get(
+          /databases/$(database)/documents/users/$(request.auth.uid)
+        ).data.role == "admin";
+    }
+
+    function isActiveUser() {
+      return signedIn()
+        && get(
+          /databases/$(database)/documents/users/$(request.auth.uid)
+        ).data.status == "active";
+    }
+
+    function isGroupAdmin(groupId) {
+      return isAdmin()
+        && exists(
+          /databases/$(database)/documents/group_admins/$(groupId + "_" + request.auth.uid)
+        );
+    }
+
+    match /users/{userId} {
+      allow read: if isSuperAdmin()
+        || (signedIn() && request.auth.uid == userId)
+        || isAdmin();
+
+      allow create: if isSuperAdmin();
+
+      allow update: if isSuperAdmin()
+        || (signedIn() && request.auth.uid == userId);
+
+      allow delete: if isSuperAdmin();
+    }
+
+    match /groups/{groupId} {
+      allow read: if isSuperAdmin() || isGroupAdmin(groupId);
+      allow create: if isSuperAdmin();
+      allow update, delete: if isSuperAdmin();
+    }
+
+    match /group_admins/{membershipId} {
+      allow read: if isSuperAdmin() || isAdmin();
+      allow create, update, delete: if isSuperAdmin();
+    }
+
+    match /group_users/{membershipId} {
+      allow read: if isSuperAdmin() || isAdmin();
+      allow create, update, delete: if isSuperAdmin() || isAdmin();
+    }
+
+    match /tasks/{taskId} {
+      allow read: if isSuperAdmin()
+        || isAdmin()
+        || (
+          signedIn()
+          && resource.data.createdBy == request.auth.uid
+        );
+
+      allow create: if isSuperAdmin() || isAdmin();
+
+      allow update: if isSuperAdmin()
+        || isAdmin()
+        || (
+          signedIn()
+          && resource.data.createdBy == request.auth.uid
+        );
+
+      allow delete: if isSuperAdmin() || isAdmin();
+    }
+
+    match /task_assignments/{assignmentId} {
+      allow read: if isSuperAdmin() || isAdmin()
+        || (
+          signedIn()
+          && resource.data.userId == request.auth.uid
+        );
+
+      allow create, update: if isSuperAdmin() || isAdmin()
+        || (
+          signedIn()
+          && resource.data.userId == request.auth.uid
+        );
+
+      allow delete: if isSuperAdmin() || isAdmin();
+    }
+
+    match /notifications/{notificationId} {
+      allow read, update: if signedIn()
+        && resource.data.userId == request.auth.uid;
+
+      allow create: if isSuperAdmin() || isAdmin();
+
+      allow delete: if isSuperAdmin()
+        || (
+          signedIn()
+          && resource.data.userId == request.auth.uid
+        );
+    }
+
+    match /activity_logs/{logId} {
+      allow read: if isSuperAdmin() || isAdmin();
+      allow create: if signedIn();
+      allow update, delete: if isSuperAdmin();
+    }
+  }
+}
