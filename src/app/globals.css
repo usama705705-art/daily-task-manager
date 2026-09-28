@@ -410,3 +410,22 @@ a {
     width: 100%;
   }
 }
+/* Authentication Links */
+
+.auth-links {
+  margin-top: 22px;
+  color: var(--muted);
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.auth-links a {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.auth-links a:hover {
+  color: var(--primary-hover);
+  text-decoration: underline;
+}
