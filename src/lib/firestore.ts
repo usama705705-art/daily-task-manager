@@ -63,6 +63,22 @@ export async function getAccessibleGroups(
   })) as Group[];
 }
 
+export async function getManagedUsers(
+  adminId: string
+): Promise<UserProfile[]> {
+  const usersQuery = query(
+    collection(db, "users"),
+    where("adminIds", "array-contains", adminId)
+  );
+
+  const snapshot = await getDocs(usersQuery);
+
+  return snapshot.docs.map((userDoc) => ({
+    id: userDoc.id,
+    ...userDoc.data(),
+  })) as UserProfile[];
+}
+
 export async function createGroup(
   group: Omit<Group, "id" | "createdAt" | "updatedAt">
 ) {
