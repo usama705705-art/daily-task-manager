@@ -19,7 +19,14 @@ export type UserProfile = {
   email: string;
   role: UserRole;
   status: AccountStatus;
+
+  // Groups this user belongs to.
   groupIds: string[];
+
+  // Admins who are allowed to manage this user.
+  // Super Admin is not required to be listed here.
+  adminIds: string[];
+
   avatarUrl?: string;
   phone?: string;
   createdAt: string;
@@ -31,6 +38,10 @@ export type Group = {
   name: string;
   description?: string;
   status: GroupStatus;
+
+  // Admins assigned to this group.
+  adminIds: string[];
+
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -43,6 +54,7 @@ export type GroupAdmin = {
   assignedBy: string;
   createdAt: string;
 };
+
 export type GroupUser = {
   id: string;
   groupId: string;
@@ -91,6 +103,7 @@ export type ActivityLog = {
   action: string;
   targetType: string;
   targetId?: string;
+  groupId?: string;
   details?: string;
   createdAt: string;
 };
