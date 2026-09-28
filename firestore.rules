@@ -21,7 +21,7 @@ service cloud.firestore {
         ).data.role == "admin";
     }
 
-    function isActiveUser() {
+    function isActiveAccount() {
       return signedIn()
         && get(
           /databases/$(database)/documents/users/$(request.auth.uid)
@@ -30,41 +30,78 @@ service cloud.firestore {
 
     function isGroupAdmin(groupId) {
       return isAdmin()
+        && isActiveAccount()
         && exists(
           /databases/$(database)/documents/group_admins/$(groupId + "_" + request.auth.uid)
         );
     }
 
     match /users/{userId} {
+
+      // Super Admin can read all profiles.
+      // Users can read their own profile.
+      // Admin access will be restricted further through group membership.
       allow read: if isSuperAdmin()
         || (signedIn() && request.auth.uid == userId)
         || isAdmin();
 
-      allow create: if isSuperAdmin();
+      // A newly registered account can create only its own
+      // basic Admin profile.
+      allow create: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.role == "admin"
+        && request.resource.data.status == "active"
+        && request.resource.data.groupIds.size() == 0
+        && request.resource.data.email == request.auth.token.email;
 
+      // Super Admin can modify any profile.
+      //
+      // A user can modify only safe personal fields.
+      // Role, status and group membership cannot be changed
+      // by the account owner.
       allow update: if isSuperAdmin()
-        || (signedIn() && request.auth.uid == userId);
+        || (
+          signedIn()
+          && request.auth.uid == userId
+          && request.resource.data.role == resource.data.role
+          && request.resource.data.status == resource.data.status
+          && request.resource.data.groupIds == resource.data.groupIds
+        );
 
       allow delete: if isSuperAdmin();
     }
 
     match /groups/{groupId} {
-      allow read: if isSuperAdmin() || isGroupAdmin(groupId);
+
+      allow read: if isSuperAdmin()
+        || isGroupAdmin(groupId);
+
+      // Only Super Admin creates groups.
       allow create: if isSuperAdmin();
+
       allow update, delete: if isSuperAdmin();
     }
 
     match /group_admins/{membershipId} {
+
       allow read: if isSuperAdmin() || isAdmin();
+
+      // Only Super Admin assigns Admins to groups.
       allow create, update, delete: if isSuperAdmin();
     }
 
     match /group_users/{membershipId} {
+
       allow read: if isSuperAdmin() || isAdmin();
-      allow create, update, delete: if isSuperAdmin() || isAdmin();
+
+      // Admins can add users.
+      allow create: if isSuperAdmin() || isAdmin();
+
+      allow update, delete: if isSuperAdmin() || isAdmin();
     }
 
     match /tasks/{taskId} {
+
       allow read: if isSuperAdmin()
         || isAdmin()
         || (
@@ -85,22 +122,26 @@ service cloud.firestore {
     }
 
     match /task_assignments/{assignmentId} {
-      allow read: if isSuperAdmin() || isAdmin()
+
+      allow read: if isSuperAdmin()
+        || isAdmin()
         || (
           signedIn()
           && resource.data.userId == request.auth.uid
         );
 
-      allow create, update: if isSuperAdmin() || isAdmin()
+      allow create, update: if isSuperAdmin()
+        || isAdmin()
         || (
           signedIn()
-          && resource.data.userId == request.auth.uid
+          && request.resource.data.userId == request.auth.uid
         );
 
       allow delete: if isSuperAdmin() || isAdmin();
     }
 
     match /notifications/{notificationId} {
+
       allow read, update: if signedIn()
         && resource.data.userId == request.auth.uid;
 
@@ -114,8 +155,11 @@ service cloud.firestore {
     }
 
     match /activity_logs/{logId} {
+
       allow read: if isSuperAdmin() || isAdmin();
+
       allow create: if signedIn();
+
       allow update, delete: if isSuperAdmin();
     }
   }
